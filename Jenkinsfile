@@ -19,6 +19,13 @@ pipeline {
                 echo 'build complete'
             }
         }
+        stage('Code Quality') {
+            steps {
+                withSonarQubeEnv('code-quality'){
+                    sh 'JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./mvnw -B sonar:sonar'
+                }
+            }
+        }
         stage('Image Build') {
             steps {
                 echo 'Building docker image....'
