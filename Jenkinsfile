@@ -22,7 +22,7 @@ pipeline {
         stage('Code Quality') {
             steps {
                 withSonarQubeEnv('code-quality'){
-                    sh 'JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./mvnw -B sonar:sonar'
+                    sh 'JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.token=$SONAR_AUTH_TOKEN'
                 }
             }
         }
