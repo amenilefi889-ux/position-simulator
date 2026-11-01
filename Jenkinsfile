@@ -3,7 +3,7 @@ pipeline {
     agent any
 
     stages {
-        stage('Preparation') {
+        stage('Checkout') {
             steps {
                 checkout scm
                 sh "git rev-parse --short HEAD > .git/commit-id"
@@ -19,22 +19,26 @@ pipeline {
                 echo 'build complete'
             }
         }
-        stage('Code Quality') {
+        stage('SonarQube analysis') {
             steps {
-                withSonarQubeEnv('code-quality'){
+                withSonarQubeEnv('code-quality') {
                     sh 'JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.token=$SONAR_AUTH_TOKEN'
                 }
             }
         }
-        stage('Image Build') {
+        stage('Build image') {
             steps {
                 echo 'Building docker image....'
-                sh 'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r -i $(minikube ssh-key) ./*  docker@$(minikube ip):~/'
-                sh "minikube image build -t position-simulator:${commit_id} ."
-                echo 'image build complete'
+                sh "docker build -t position-simulator:${commit_id} ."
             }
         }
-        stage('Deploy') {
+        stage('Push image') {
+            steps {
+                echo 'Pushing image to the cluster....'
+                sh "minikube image load position-simulator:${commit_id}"
+            }
+        }
+        stage('Deploy to Kubernetes') {
             steps {
                 echo 'Deploying to Kubernetes'
                 sh "sed -i -r 's|richardchesterwood/k8s-fleetman-position-simulator:release2|position-simulator:${commit_id}|' ./manifests/workloads.yaml"
@@ -42,6 +46,14 @@ pipeline {
                 sh 'kubectl get all'
                 echo 'deployment complete'
             }
+        }
+    }
+    post {
+        success {
+            echo "Pipeline termine avec succes : position-simulator:${commit_id}"
+        }
+        failure {
+            echo 'Echec du pipeline : consulter la console Jenkins'
         }
     }
 }
